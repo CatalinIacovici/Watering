@@ -1,0 +1,64 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - echo "=== INSTALL PHASE ==="
+      - echo "Node version:"
+      - node --version
+      - echo "NPM version:"
+      - npm --version
+      - echo "Docker version:"
+      - docker --version
+
+  pre_build:
+    commands:
+      - echo "=== PRE-BUILD PHASE ==="
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 820007222496.dkr.ecr.eu-north-1.amazonaws.com
+      - REPOSITORY_URI=820007222496.dkr.ecr.eu-north-1.amazonaws.com/stylesoft/projects
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=watering-${COMMIT_HASH:=latest}
+      - echo "Repository URI:" $REPOSITORY_URI
+      - echo "Image Tag:" $IMAGE_TAG
+      - echo "Checking project files..."
+      - ls -la
+
+  build:
+    commands:
+      - echo "=== BUILD PHASE ==="
+      - echo Build started on `date`
+      - echo "Building Docker image..."
+      - docker build -t watering-temp . || exit 1
+      - echo "Docker build completed successfully"
+      - echo "Current Docker images:"
+      - docker images
+      - echo "Tagging image with ECR URI..."
+      - docker tag watering-temp $REPOSITORY_URI:$IMAGE_TAG
+      - docker tag watering-temp $REPOSITORY_URI:watering-latest
+      - echo "After tagging - Docker images:"
+      - docker images
+
+  post_build:
+    commands:
+      - echo "=== POST-BUILD PHASE ==="
+      - echo Build completed on `date`
+      - echo "Pushing image:" $REPOSITORY_URI:$IMAGE_TAG
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo "Pushing image:" $REPOSITORY_URI:watering-latest  
+      - docker push $REPOSITORY_URI:watering-latest
+      - echo "Writing image definitions file..."
+      - printf '[{"name":"watering-app","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - cat imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
+
+cache:
+  paths:
+    - '/root/.npm/**/*'
+    - 'node_modules/**/*'
