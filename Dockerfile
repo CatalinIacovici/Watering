@@ -14,7 +14,7 @@ RUN npm ci --only=production
 COPY . .
 
 # Build Angular application
-RUN npm run build --configuration production
+RUN npm run build
 
 # Production stage with nginx
 FROM nginx:alpine
