@@ -42,6 +42,12 @@ phases:
       - echo "Files uploaded to S3 successfully"
       - echo "S3 bucket contents:"
       - aws s3 ls s3://watering-style-soft/ --region eu-north-1
+      - echo "Invalidating CloudFront cache..."
+      - |
+        aws cloudfront create-invalidation \
+          --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} \
+          --paths "/*"
+      - echo "CloudFront cache invalidation completed"
       - echo Build completed on `date`
 
 artifacts:
