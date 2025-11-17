@@ -44,10 +44,15 @@ phases:
       - aws s3 ls s3://watering-style-soft/ --region eu-north-1
       - echo "Invalidating CloudFront cache..."
       - |
-        aws cloudfront create-invalidation \
-          --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} \
-          --paths "/*"
-      - echo "CloudFront cache invalidation completed"
+        if [ -z "$CLOUDFRONT_DISTRIBUTION_ID" ]; then
+          echo "WARNING: CLOUDFRONT_DISTRIBUTION_ID not set, skipping cache invalidation"
+        else
+          echo "Using CloudFront Distribution ID: $CLOUDFRONT_DISTRIBUTION_ID"
+          aws cloudfront create-invalidation \
+            --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
+            --paths "/*"
+          echo "CloudFront cache invalidation completed"
+        fi
       - echo Build completed on `date`
 
 artifacts:
